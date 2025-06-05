@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Name That Note!</title>
+    <style>
+      body {
+        font-family: 'Bangers', cursive, sans-serif;
+        background: #FFD700;
+        text-align: center;
+        padding: 2rem;
+	font-size: 1.8rem;
+      }
+      h1 {
+        font-size: 3rem;
+        color: #6a1b9a;
+      }
+      .card {
+        background: #fff;
+        max-width: 500px;
+        margin: auto;
+        border-radius: 20px;
+        padding: 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+      .note {
+        padding: 1rem;
+      }
+      .note svg {
+        background: #fff;
+        padding: 1rem 2rem;
+        display: block;
+        margin:auto;
+        border-radius: 10px;
+      }
+      .options button {
+        font-family: 'Bangers', cursive, sans-serif;
+        background-color: #00bfff;
+        border: none;
+        margin: 0.5rem;
+        padding: 1rem 2rem;
+        border-radius: 15px;
+        font-size: 1.9rem;
+        cursor: pointer;
+      }
+      .options button:hover {
+        background-color: #ff4500;
+      }
+      .feedback {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-top: 1rem;
+      }
+      .correct {
+        color: green;
+      }
+      .incorrect {
+        color: red;
+      }
+      ul {
+        text-align: center;
+        list-style: none;
+      }
+      .playbtn {
+        font-family: Bangers;
+        font-size: 1em;
+        padding: 0.5em;
+      }
+      .credits {
+        font-size: 0.6em;
+        margin-top: 2rem;
+        color: #555;
+      }
+    </style>
+    <script src="https://unpkg.com/vexflow@4.1.0/build/cjs/vexflow.js"></script>
+  </head>
+  <body>
+    <h1>🎵 Name That Note! 🎶</h1>
+    <div class="card">
+      <div id="quiz"></div>
+    </div>
+
+    <audio id="wrong-sound" src="./failure-1-89170.mp3"></audio>
+    <audio id="correct-sound" src="./success-340660.mp3"></audio>
+
+    <script>
+      const NOTES = ["C", "D", "E", "F", "G", "A", "B"];
+      const NOTE_POSITIONS = {
+        C: "C/4",
+        D: "D/4",
+        E: "E/4",
+        F: "F/4",
+        G: "G/4",
+        A: "A/4",
+        B: "B/4"
+      };
+
+      let round = 9;
+      let score = 0;
+      let speeds = [];
+      let startTime = Date.now();
+      const history = JSON.parse(localStorage.getItem("noteQuizHistory") || "[]");
+
+      function getRandomNote() {
+        return NOTES[Math.floor(Math.random() * NOTES.length)];
+      } 
+
+      function getOptions(correct) {
+        const options = new Set([correct]);
+        while (options.size < 4) {
+          options.add(getRandomNote());
+        }
+        return Array.from(options).sort(() => Math.random() - 0.5);
+      }
+
+      function drawNote(noteName, roundNumber) {
+        const canvasId = `note-canvas-${roundNumber}`;
+        const div = document.createElement("div");
+        div.innerHTML = `<div class="note" id="${canvasId}"></div>`;
+
+        setTimeout(() => {
+          const canvas = document.getElementById(canvasId);
+          if (!canvas) return;
+
+          const { Renderer, Stave, StaveNote, Voice, Formatter } = Vex.Flow;
+          const renderer = new Renderer(canvas, Renderer.Backends.SVG);
+
+          // Configure the rendering context.
+          renderer.resize(80,100);
+          const context = renderer.getContext();
+
+          // Create a stave of width 80 at position 10, 40 on the canvas.
+          const stave = new Stave(0, 0, 70);
+
+          // Add a clef and time signature.
+          stave.addClef("treble");
+
+          // Connect it to the rendering context and draw!
+          stave.setContext(context).draw();
+
+
+          const notes = [
+            new StaveNote({ keys: [NOTE_POSITIONS[noteName]], duration: "q" }),
+          ];
+
+          // Create a voice in 4/4 and add above notes
+          const voice = new Voice({ num_beats: 1, beat_value: 4 });
+          voice.addTickables(notes);
+
+          // Format and justify the notes to 400 pixels.
+            new Formatter().joinVoices([voice]).format([voice], 70);
+
+          // Render voice
+          voice.draw(context, stave);
+
+
+        }, 50);
+
+        return div;
+      }
+
+      function renderQuiz(correctNote, options) {
+        const quiz = document.getElementById("quiz");
+        quiz.innerHTML = "";
+
+        const noteDiv = drawNote(correctNote, round);
+        quiz.appendChild(noteDiv);
+
+        const optionsDiv = document.createElement("div");
+        optionsDiv.className = "options";
+        options.forEach(opt => {
+          const btn = document.createElement("button");
+          btn.textContent = opt;
+          btn.onclick = () => handleAnswer(opt, correctNote);
+          optionsDiv.appendChild(btn);
+        });
+
+        quiz.appendChild(optionsDiv);
+
+        const roundInfo = document.createElement("p");
+        roundInfo.innerHTML = `<p>Round ${round} of 10</p><p>Your Score: ${score}</p>`;
+        quiz.appendChild(roundInfo);
+
+        startTime = Date.now();
+      }
+
+      function handleAnswer(answer, correctNote) {
+        const timeTaken = (Date.now() - startTime) / 1000;
+        const correctSound = document.getElementById("correct-sound");
+        const wrongSound = document.getElementById("wrong-sound");
+
+        const feedback = document.createElement("div");
+        feedback.className = "feedback";
+
+        if (answer === correctNote) {
+          score++;
+          speeds.push(timeTaken);
+          correctSound.play();
+          feedback.textContent = "✅ Correct!";
+          feedback.classList.add("correct");
+        } else {
+          wrongSound.play();
+          feedback.textContent = `❌ Wrong! It was ${correctNote}.`;
+          feedback.classList.add("incorrect");
+        }
+
+        document.getElementById("quiz").appendChild(feedback);
+
+        if (round === 10) {
+          setTimeout(() => {
+            const avgSpeed = (
+              speeds.reduce((a, b) => a + b, 0) / speeds.length
+            ).toFixed(2);
+
+            const newRecord = { score, avgSpeed };
+            history.unshift(newRecord);
+            localStorage.setItem("noteQuizHistory", JSON.stringify(history));
+
+            showResults(score, avgSpeed);
+          }, 1500);
+        } else {
+          round++;
+          setTimeout(() => {
+            const newNote = getRandomNote();
+            const newOptions = getOptions(newNote);
+            renderQuiz(newNote, newOptions);
+          }, 1500);
+        }
+      }
+
+      function showResults(score, avgSpeed) {
+
+        // Step 1: Find the highest score
+const maxScore = Math.max(...history.map(item => item.score));
+
+// Step 2: Find all items with max score
+const topScorers = history.filter(item => item.score === maxScore);
+
+// Step 3: Find the one with the lowest speed among top scorers
+const bestItem = topScorers.reduce((best, item) =>
+  item.avgSpeed < best.avgSpeed ? item : best
+);
+
+// Step 4: Render the list
+var historyText = "";
+history.forEach(item => {
+  if (item === bestItem) {
+    historyText += `<li style="font-weight: bold; color: green;">`;
+  }
+  else {
+    historyText += `<li>`;
+  }
+
+  historyText += `Score: ${item.score}, Speed: ${item.avgSpeed}</li>`;
+});
+
+        const quiz = document.getElementById("quiz");
+        quiz.innerHTML = `
+          <h2>🎉 Quiz Complete!</h2>
+          <p>Your Score: ${score}/10</p>
+          <p>Average Time for Correct Answers: ${avgSpeed} seconds</p>
+          <h3>Your Results</h3>
+          <ul>${historyText}</ul>
+          <button class="playbtn" onclick="restartQuiz()">Play Again</button>
+          `;
+      }
+
+      function restartQuiz() {
+        round = 1;
+        score = 0;
+        speeds = [];
+        const note = getRandomNote();
+        const opts = getOptions(note);
+        renderQuiz(note, opts);
+      }
+
+      const initialNote = getRandomNote();
+      renderQuiz(initialNote, getOptions(initialNote));
+    </script>
+  </body>
+  <div class="credits">
+  <p>Sound Effects by <a href="https://pixabay.com/users/u_2gxydaiwcd-46893983/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=340660">u_2gxydaiwcd</a> and <a href="https://pixabay.com/users/freesound_community-46691455/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=89170">freesound_community</a> from <a href="https://pixabay.com/sound-effects/">Pixabay</a>
+  </div>
+  </p>
+</html>
+
