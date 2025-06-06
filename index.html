@@ -13,10 +13,10 @@
         background: #FFD700;
         text-align: center;
         padding: 2rem;
-	font-size: 1.8rem;
+	font-size: 1.5rem;
       }
       h1 {
-        font-size: 3rem;
+        font-size: 2rem;
         color: #6a1b9a;
       }
       .card {
@@ -42,9 +42,9 @@
         background-color: #00bfff;
         border: none;
         margin: 0.5rem;
-        padding: 1rem 2rem;
-        border-radius: 15px;
-        font-size: 1.9rem;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        font-size: 1.5rem;
         cursor: pointer;
       }
       .options button:hover {
@@ -130,11 +130,11 @@
           const renderer = new Renderer(canvas, Renderer.Backends.SVG);
 
           // Configure the rendering context.
-          renderer.resize(80,100);
+          renderer.resize(180,80);
           const context = renderer.getContext();
 
-          // Create a stave of width 80 at position 10, 40 on the canvas.
-          const stave = new Stave(0, 0, 70);
+          // Create a stave of width 70 at position 10, 40 on the canvas.
+          const stave = new Stave(0, 0, 170);
 
           // Add a clef and time signature.
           stave.addClef("treble");
@@ -152,7 +152,7 @@
           voice.addTickables(notes);
 
           // Format and justify the notes to 400 pixels.
-            new Formatter().joinVoices([voice]).format([voice], 70);
+            new Formatter().joinVoices([voice]).format([voice], 170);
 
           // Render voice
           voice.draw(context, stave);
