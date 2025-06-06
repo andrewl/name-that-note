@@ -24,7 +24,8 @@
         max-width: 500px;
         margin: auto;
         border-radius: 20px;
-        padding: 1rem;
+        padding: 0;
+        padding-bottom: 1rem;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
       .note {
@@ -42,7 +43,7 @@
         background-color: #00bfff;
         border: none;
         margin: 0.5rem;
-        padding: 1rem 1.5rem;
+        padding: 0.8rem 1.2rem;
         border-radius: 12px;
         font-size: 1.5rem;
         cursor: pointer;
@@ -71,7 +72,7 @@
         padding: 0.5em;
       }
       .credits {
-        font-size: 0.6em;
+        font-size: 0.4em;
         margin-top: 2rem;
         color: #555;
       }
@@ -79,7 +80,7 @@
     <script src="https://unpkg.com/vexflow@4.1.0/build/cjs/vexflow.js"></script>
   </head>
   <body>
-    <h1>🎵 Name That Note! 🎶</h1>
+    <h1>🎵Name That Note!🎵</h1>
     <div class="card">
       <div id="quiz"></div>
     </div>
@@ -130,11 +131,11 @@
           const renderer = new Renderer(canvas, Renderer.Backends.SVG);
 
           // Configure the rendering context.
-          renderer.resize(180,80);
+          renderer.resize(180,100);
           const context = renderer.getContext();
 
-          // Create a stave of width 70 at position 10, 40 on the canvas.
-          const stave = new Stave(0, 0, 170);
+          // Create a stave of width 175
+          const stave = new Stave(40, 0, 100);
 
           // Add a clef and time signature.
           stave.addClef("treble");
@@ -152,7 +153,7 @@
           voice.addTickables(notes);
 
           // Format and justify the notes to 400 pixels.
-            new Formatter().joinVoices([voice]).format([voice], 170);
+          new Formatter().joinVoices([voice]).format([voice], 100);
 
           // Render voice
           voice.draw(context, stave);
