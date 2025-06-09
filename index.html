@@ -90,15 +90,6 @@
 
     <script>
       const NOTES = ["C", "D", "E", "F", "G", "A", "B"];
-      const NOTE_POSITIONS = {
-        C: "C/4",
-        D: "D/4",
-        E: "E/4",
-        F: "F/4",
-        G: "G/4",
-        A: "A/4",
-        B: "B/4"
-      };
 
       let round = 1;
       let score = 0;
@@ -109,6 +100,16 @@
       function getRandomNote() {
         return NOTES[Math.floor(Math.random() * NOTES.length)];
       } 
+
+      function getRandomClef() {
+        return Math.random() < 0.5 ? "treble" : "bass";
+      }
+
+      // Create the note name based on the clef and note
+      function getNotePosition(clef, note) {
+        const octaveOffset = clef === "treble" ? 4 : 2; // Treble clef starts at C4, Bass clef at C2
+        return note + "/" + (octaveOffset + Math.floor(Math.random() * 2));
+      }
 
       function getOptions(correct) {
         const options = new Set([correct]);
@@ -131,21 +132,23 @@
           const renderer = new Renderer(canvas, Renderer.Backends.SVG);
 
           // Configure the rendering context.
-          renderer.resize(180,100);
+          renderer.resize(180,120);
           const context = renderer.getContext();
 
           // Create a stave of width 175
           const stave = new Stave(40, 0, 100);
 
+          const clef = getRandomClef();
+
           // Add a clef and time signature.
-          stave.addClef("treble");
+          stave.addClef(clef);
 
           // Connect it to the rendering context and draw!
           stave.setContext(context).draw();
 
 
           const notes = [
-            new StaveNote({ keys: [NOTE_POSITIONS[noteName]], duration: "q" }),
+            new StaveNote({ clef: clef, keys: [getNotePosition(clef,noteName)], duration: "q" }),
           ];
 
           // Create a voice in 4/4 and add above notes
@@ -183,7 +186,8 @@
         quiz.appendChild(optionsDiv);
 
         const roundInfo = document.createElement("p");
-        roundInfo.innerHTML = `<p>Round ${round} of 10</p><p>Your Score: ${score}</p>`;
+        const roundText = round === 10 ? "Final Round" : `Round ${round} of 10`;
+        roundInfo.innerHTML = `<p>${roundText}</p><p>Your Score: ${score}</p>`;
         quiz.appendChild(roundInfo);
 
         startTime = Date.now();
@@ -218,46 +222,65 @@
             ).toFixed(2);
 
             const newRecord = { score, avgSpeed };
-            history.unshift(newRecord);
-            localStorage.setItem("noteQuizHistory", JSON.stringify(history));
+            saveToHistory(newRecord);
 
             showResults(score, avgSpeed);
-          }, 1500);
+          }, 2000);
         } else {
           round++;
           setTimeout(() => {
             const newNote = getRandomNote();
             const newOptions = getOptions(newNote);
             renderQuiz(newNote, newOptions);
-          }, 1500);
+          }, 2000);
         }
+      }
+
+      function saveToHistory(newScore) {
+        // 1. Load history
+        const history = JSON.parse(localStorage.getItem("noteQuizHistory")) || [];
+
+        // 2. Add new entry
+        history.push(newScore);
+
+        // 3. Sort: highest score first, then lowest avgSpeed
+        history.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return a.avgSpeed - b.avgSpeed;
+        });
+
+        // 4. Keep top 5
+        const trimmed = history.slice(0, 5);
+
+        // 5. Save back to localStorage
+        localStorage.setItem("noteQuizHistory", JSON.stringify(trimmed));
       }
 
       function showResults(score, avgSpeed) {
 
         // Step 1: Find the highest score
-const maxScore = Math.max(...history.map(item => item.score));
+        const maxScore = Math.max(...history.map(item => item.score));
 
-// Step 2: Find all items with max score
-const topScorers = history.filter(item => item.score === maxScore);
+        // Step 2: Find all items with max score
+        const topScorers = history.filter(item => item.score === maxScore);
 
-// Step 3: Find the one with the lowest speed among top scorers
-const bestItem = topScorers.reduce((best, item) =>
-  item.avgSpeed < best.avgSpeed ? item : best
-);
+        // Step 3: Find the one with the lowest speed among top scorers
+        const bestItem = topScorers.reduce((best, item) =>
+          item.avgSpeed < best.avgSpeed ? item : best
+      );
 
-// Step 4: Render the list
-var historyText = "";
-history.forEach(item => {
-  if (item === bestItem) {
-    historyText += `<li style="font-weight: bold; color: green;">`;
-  }
-  else {
-    historyText += `<li>`;
-  }
+        // Step 4: Render the list
+        var historyText = "";
+        history.forEach(item => {
+          if (item === bestItem) {
+            historyText += `<li style="font-weight: bold; color: green;">`;
+          }
+          else {
+            historyText += `<li>`;
+          }
 
-  historyText += `Score: ${item.score}, Speed: ${item.avgSpeed}</li>`;
-});
+          historyText += `Score: ${item.score}, Speed: ${item.avgSpeed}</li>`;
+        });
 
         const quiz = document.getElementById("quiz");
         quiz.innerHTML = `
