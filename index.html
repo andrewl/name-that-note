@@ -107,8 +107,12 @@
 
       // Create the note name based on the clef and note
       function getNotePosition(clef, note) {
-        const octaveOffset = clef === "treble" ? 4 : 2; // Treble clef starts at C4, Bass clef at C2
-        return note + "/" + (octaveOffset + Math.floor(Math.random() * 2));
+        const octaveOffset = clef === "treble" ? 4 : 3; // Treble clef starts at C4, Bass clef at C2
+        if (note === "C") {
+          octaveOffset += 1; // C is one octave higher in treble clef
+        }
+        //return note + "/" + (octaveOffset + Math.floor(Math.random() * 2));
+        return `${note}/${octaveOffset}`;
       }
 
       function getOptions(correct) {
