@@ -28,6 +28,9 @@
         padding-bottom: 1rem;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
+      .main-menu {
+        padding: 1rem;
+      }
       .note {
         padding: 1rem;
       }
@@ -91,11 +94,12 @@
     <script>
       const NOTES = ["C", "D", "E", "F", "G", "A", "B"];
 
+      let scale = "C"; // Default scale
       let round = 1;
       let score = 0;
       let speeds = [];
       let startTime = Date.now();
-      const history = JSON.parse(localStorage.getItem("noteQuizHistory") || "[]");
+      //const history = JSON.parse(localStorage.getItem(getHistoryKey()) || "[]");
 
       function getRandomNote() {
         return NOTES[Math.floor(Math.random() * NOTES.length)];
@@ -197,6 +201,12 @@
       }
 
       function handleAnswer(answer, correctNote) {
+        //disable all buttons
+        const buttons = document.querySelectorAll(".options button");
+        buttons.forEach(button => {
+          button.disabled = true;
+        });
+
         const timeTaken = (Date.now() - startTime) / 1000;
         const correctSound = document.getElementById("correct-sound");
         const wrongSound = document.getElementById("wrong-sound");
@@ -210,8 +220,7 @@
           correctSound.play();
           feedback.textContent = "✅ Correct!";
           feedback.classList.add("correct");
-        } else {
-          wrongSound.play();
+        } else {          wrongSound.play();
           feedback.textContent = `❌ Wrong! It was ${correctNote}.`;
           feedback.classList.add("incorrect");
         }
@@ -220,9 +229,14 @@
 
         if (round === 10) {
           setTimeout(() => {
-            const avgSpeed = (
-              speeds.reduce((a, b) => a + b, 0) / speeds.length
-            ).toFixed(2);
+            if (score > 0) {
+              avgSpeed = (
+                speeds.reduce((a, b) => a + b, 0) / speeds.length
+              ).toFixed(2);
+            }
+            else {
+              avgSpeed = 0;
+            }
 
             const newRecord = { score, avgSpeed };
             saveToHistory(newRecord);
@@ -239,9 +253,13 @@
         }
       }
 
+      function getHistoryKey() {
+        return "noteQuizHistory_" + scale;
+      }
+
       function saveToHistory(newScore) {
         // 1. Load history
-        const history = JSON.parse(localStorage.getItem("noteQuizHistory")) || [];
+        const history = JSON.parse(localStorage.getItem(getHistoryKey())) || [];
 
         // 2. Add new entry
         history.push(newScore);
@@ -256,24 +274,19 @@
         const trimmed = history.slice(0, 5);
 
         // 5. Save back to localStorage
-        localStorage.setItem("noteQuizHistory", JSON.stringify(trimmed));
+        localStorage.setItem(getHistoryKey(), JSON.stringify(trimmed));
       }
 
       function showResults(score, avgSpeed) {
 
-        // Step 1: Find the highest score
-        const maxScore = Math.max(...history.map(item => item.score));
-
-        // Step 2: Find all items with max score
-        const topScorers = history.filter(item => item.score === maxScore);
-
-        // Step 3: Find the one with the lowest speed among top scorers
-        const bestItem = topScorers.reduce((best, item) =>
-          item.avgSpeed < best.avgSpeed ? item : best
-      );
+        // Load history from localStorage
+        const history = JSON.parse(localStorage.getItem(getHistoryKey())) || [];
 
         // Step 4: Render the list
         var historyText = "";
+
+        const bestItem = history[0];
+
         history.forEach(item => {
           if (item === bestItem) {
             historyText += `<li style="font-weight: bold; color: green;">`;
@@ -292,11 +305,23 @@
           <p>Average Time for Correct Answers: ${avgSpeed} seconds</p>
           <h3>Your Results</h3>
           <ul>${historyText}</ul>
-          <button class="playbtn" onclick="restartQuiz()">Play Again</button>
+          <button class="playbtn" onclick="showMainMenu()">Play Again</button>
           `;
       }
 
-      function restartQuiz() {
+      function showMainMenu() {
+        const quiz = document.getElementById("quiz");
+        quiz.innerHTML = `
+          <div class="main-menu">
+          <h3>Welcome to Name That Note!</h3>
+          <p>Test your musical knowledge by identifying notes on the staff.</p>
+          <h3>Select a scale to start</h3>
+          <button class="playbtn" onclick="startQuiz('C')">C Major Scale</button>
+          </div>
+        `;
+      }
+
+      function startQuiz() {
         round = 1;
         score = 0;
         speeds = [];
@@ -305,8 +330,12 @@
         renderQuiz(note, opts);
       }
 
+      showMainMenu();
+
+      /*
       const initialNote = getRandomNote();
       renderQuiz(initialNote, getOptions(initialNote));
+      */
     </script>
   </body>
   <div class="credits">
