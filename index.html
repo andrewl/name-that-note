@@ -73,6 +73,7 @@
         font-family: Bangers;
         font-size: 1em;
         padding: 0.5em;
+        margin: 0.3em;
       }
       .credits {
         font-size: 0.4em;
@@ -86,15 +87,22 @@
     <h1>🎵Name That Note!🎵</h1>
     <div class="card">
       <div id="quiz"></div>
-    </div>
+    </div> 
 
     <audio id="wrong-sound" src="./failure-1-89170.mp3"></audio>
     <audio id="correct-sound" src="./success-340660.mp3"></audio>
 
     <script>
-      const NOTES = ["C", "D", "E", "F", "G", "A", "B"];
+      const SCALE_NAMES = {
+        C: "C Major",
+        G: "G Major"
+      };
+      const SCALES = {
+        C: ["C", "D", "E", "F", "G", "A", "B"],
+        G: ["G", "A", "B", "C", "D", "E", "F#"]
+      };
 
-      let scale = "C"; // Default scale
+      let scale = 'C'; // Default scale
       let round = 1;
       let score = 0;
       let speeds = [];
@@ -102,7 +110,10 @@
       //const history = JSON.parse(localStorage.getItem(getHistoryKey()) || "[]");
 
       function getRandomNote() {
-        return NOTES[Math.floor(Math.random() * NOTES.length)];
+        //return NOTES[Math.floor(Math.random() * NOTES.length)];
+        return SCALES[scale][
+          Math.floor(Math.random() * SCALES[scale].length)
+        ];
       } 
 
       function getRandomClef() {
@@ -135,7 +146,7 @@
           const canvas = document.getElementById(canvasId);
           if (!canvas) return;
 
-          const { Renderer, Stave, StaveNote, Voice, Formatter } = Vex.Flow;
+          const { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } = Vex.Flow;
           const renderer = new Renderer(canvas, Renderer.Backends.SVG);
 
           // Configure the rendering context.
@@ -153,10 +164,16 @@
           // Connect it to the rendering context and draw!
           stave.setContext(context).draw();
 
-
-          const notes = [
+          notes = [
             new StaveNote({ clef: clef, keys: [getNotePosition(clef,noteName)], duration: "q" }),
           ];
+
+          if (noteName.endsWith("b") || noteName.endsWith("#")) {
+            // Add an accidental if the note is sharp or flat
+            notes[0].addModifier(new Accidental(noteName.endsWith("#") ? "#" : "b"));
+          }
+
+          console.log(notes);
 
           // Create a voice in 4/4 and add above notes
           const voice = new Voice({ num_beats: 1, beat_value: 4 });
@@ -299,11 +316,12 @@
         });
 
         const quiz = document.getElementById("quiz");
+        const scaleName = "for " + SCALE_NAMES[scale] || "";
         quiz.innerHTML = `
           <h2>🎉 Quiz Complete!</h2>
           <p>Your Score: ${score}/10</p>
           <p>Average Time for Correct Answers: ${avgSpeed} seconds</p>
-          <h3>Your Results</h3>
+          <h3>Your Results ${scaleName}</h3>
           <ul>${historyText}</ul>
           <button class="playbtn" onclick="showMainMenu()">Play Again</button>
           `;
@@ -311,17 +329,18 @@
 
       function showMainMenu() {
         const quiz = document.getElementById("quiz");
+        const scaleOptions = Object.keys(SCALE_NAMES).map(key => `<button class="playbtn" onclick="startQuiz('${key}')">${SCALE_NAMES[key]}</button>`).join("<br/>");
         quiz.innerHTML = `
           <div class="main-menu">
           <h3>Welcome to Name That Note!</h3>
           <p>Test your musical knowledge by identifying notes on the staff.</p>
           <h3>Select a scale to start</h3>
-          <button class="playbtn" onclick="startQuiz('C')">C Major Scale</button>
-          </div>
-        `;
+          ${scaleOptions}
+          </div>`;
       }
 
-      function startQuiz() {
+      function startQuiz(scaleName) {
+        scale = scaleName;
         round = 1;
         score = 0;
         speeds = [];
