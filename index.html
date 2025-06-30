@@ -95,10 +95,12 @@
     <script>
       const SCALE_NAMES = {
         C: "C Major",
+        F: "F Major",
         G: "G Major"
       };
       const SCALES = {
         C: ["C", "D", "E", "F", "G", "A", "B"],
+        F: ["F", "G", "A", "Bb", "C", "D", "E"],
         G: ["G", "A", "B", "C", "D", "E", "F#"]
       };
 
@@ -113,7 +115,7 @@
         //return NOTES[Math.floor(Math.random() * NOTES.length)];
         return SCALES[scale][
           Math.floor(Math.random() * SCALES[scale].length)
-        ];
+        ]
       } 
 
       function getRandomClef() {
@@ -122,10 +124,22 @@
 
       // Create the note name based on the clef and note
       function getNotePosition(clef, note) {
-        var octaveOffset = clef === "treble" ? 4 : 3; // Treble clef starts at C4, Bass clef at C2
-        if (note === "C") {
-          octaveOffset += 1; // C is one octave higher in treble clef
+        var octaveOffset = clef === "treble" ? 4 : 3;
+        console.log(scale, note);
+        if (scale == "F" && (note == "C" || note == "D" || note == "E")) {
+          console.warn("increasing scale");
+          octaveOffset++;
         }
+        if (scale == "F" && clef == "bass") {
+          octaveOffset--;
+        }
+        if (scale == "G" && (note == "G" || note == "A" || note == "B")) {
+          octaveOffset--;
+        }
+        if (scale == "G" && clef == "treble") {
+          octaveOffset++;
+        }
+        console.log(`${note}/${octaveOffset}`);
         return `${note}/${octaveOffset}`;
       }
 
@@ -137,8 +151,7 @@
         return Array.from(options).sort(() => Math.random() - 0.5);
       }
 
-      function drawNote(noteName, roundNumber) {
-        const canvasId = `note-canvas-${roundNumber}`;
+      function drawNotes(noteNames, canvasId) {
         const div = document.createElement("div");
         div.innerHTML = `<div class="note" id="${canvasId}"></div>`;
 
@@ -150,11 +163,11 @@
           const renderer = new Renderer(canvas, Renderer.Backends.SVG);
 
           // Configure the rendering context.
-          renderer.resize(180,120);
+          renderer.resize(180*noteNames.length,120);
           const context = renderer.getContext();
 
           // Create a stave of width 175
-          const stave = new Stave(40, 0, 100);
+          const stave = new Stave(40, 0, 100 * noteNames.length + 20);
 
           const clef = getRandomClef();
 
@@ -164,23 +177,27 @@
           // Connect it to the rendering context and draw!
           stave.setContext(context).draw();
 
-          notes = [
-            new StaveNote({ clef: clef, keys: [getNotePosition(clef,noteName)], duration: "q" }),
-          ];
+          notes = [];
+          for (const noteName of noteNames) {
+            // Create a note with the given name and clef
+            nextNote = new StaveNote({ clef: clef, keys: [getNotePosition(clef, noteName)], duration: "q" });
 
-          if (noteName.endsWith("b") || noteName.endsWith("#")) {
-            // Add an accidental if the note is sharp or flat
-            notes[0].addModifier(new Accidental(noteName.endsWith("#") ? "#" : "b"));
+            if (noteName.endsWith("b") || noteName.endsWith("#")) {
+              // Add an accidental if the note is sharp or flat
+              nextNote.addModifier(new Accidental(noteName.endsWith("#") ? "#" : "b"));
+            }
+
+            notes.push(nextNote);
           }
 
           console.log(notes);
 
           // Create a voice in 4/4 and add above notes
-          const voice = new Voice({ num_beats: 1, beat_value: 4 });
+          const voice = new Voice({ num_beats: noteNames.length , beat_value: 4 });
           voice.addTickables(notes);
 
           // Format and justify the notes to 400 pixels.
-          new Formatter().joinVoices([voice]).format([voice], 100);
+          new Formatter().joinVoices([voice]).format([voice], 120);
 
           // Render voice
           voice.draw(context, stave);
@@ -195,7 +212,7 @@
         const quiz = document.getElementById("quiz");
         quiz.innerHTML = "";
 
-        const noteDiv = drawNote(correctNote, round);
+        const noteDiv = drawNotes([correctNote], `note-canvas-${round}`);
         quiz.appendChild(noteDiv);
 
         const optionsDiv = document.createElement("div");
@@ -349,12 +366,26 @@
         renderQuiz(note, opts);
       }
 
-      showMainMenu();
+      function drawScale(scaleName) {
+        scale = scaleName;
+        const quiz = document.getElementById("quiz");
+        quiz.innerHTML = "";
+        const noteDiv = drawNotes(SCALES[scaleName], `test-{scaleName}`);
+        quiz.appendChild(noteDiv);
+        console.log(`Drawing scale ${scaleName}:`, SCALES[scaleName]);
+      }
 
-      /*
-      const initialNote = getRandomNote();
-      renderQuiz(initialNote, getOptions(initialNote));
-      */
+
+      //if we've been passed a scale in the url, we need to test that
+      const urlParams = new URLSearchParams(window.location.search);
+      const scaleParam = urlParams.get('test');
+      if (scaleParam && SCALE_NAMES[scaleParam]) {
+        drawScale(scaleParam);
+      }
+      else {
+        showMainMenu();
+      }
+
     </script>
   </body>
   <div class="credits">
